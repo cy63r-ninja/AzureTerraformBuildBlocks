@@ -249,7 +249,7 @@ resource "azurerm_virtual_machine_extension" "ama_windows" {
   virtual_machine_id        = azurerm_windows_virtual_machine.windows.id
   publisher                 = "Microsoft.Azure.Monitor"
   type                      = "AzureMonitorWindowsAgent"
-  type_handler_version      = "1.0"
+  type_handler_version      = "1.36.0.0"
   automatic_upgrade_enabled = true
 }
 
