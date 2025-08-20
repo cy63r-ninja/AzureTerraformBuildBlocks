@@ -166,11 +166,11 @@ resource "azurerm_linux_virtual_machine" "linux" {
     azurerm_network_interface.nic_linux.id
   ]
 
-  # Ubuntu 24.04 LTS ("Noble")
+  # Ubuntu 24.04 LTS (Gen2) - widely available image
   source_image_reference {
     publisher = "Canonical"
-    offer     = "0001-com-ubuntu-server-noble"
-    sku       = "24_04-lts"
+    offer     = "UbuntuServer"
+    sku       = "24_04-lts-gen2"
     version   = "latest"
   }
 
@@ -180,6 +180,7 @@ resource "azurerm_linux_virtual_machine" "linux" {
     storage_account_type = "Standard_LRS"
   }
 
+  # Auth policy
   disable_password_authentication = local.has_ssh_key
   admin_password                  = local.has_ssh_key ? null : var.admin_password
 
@@ -224,6 +225,7 @@ resource "azurerm_windows_virtual_machine" "windows" {
     azurerm_network_interface.nic_windows.id
   ]
 
+  # Windows Server 2022 Datacenter
   source_image_reference {
     publisher = "MicrosoftWindowsServer"
     offer     = "WindowsServer"
@@ -305,6 +307,7 @@ resource "azurerm_monitor_data_collection_rule" "dcr_windows" {
     }
   }
 
+  # Route Windows events to LAW
   data_flow {
     streams      = ["Microsoft-WindowsEvent"]
     destinations = ["law-dest"]
@@ -315,10 +318,11 @@ resource "azurerm_monitor_data_collection_rule" "dcr_windows" {
       name    = "win-events"
       streams = ["Microsoft-WindowsEvent"]
 
+      # Valid XPaths; collect levels 0..5 is broad. Narrowed to <=3 is common.
       x_path_queries = [
-        "Application!*[System[(Level >= 0)]]",
-        "Security!*[System[(Level >= 0)]]",
-        "System!*[System[(Level >= 0)]]"
+        "Application!*[System[(Level=1 or Level=2 or Level=3 or Level=4 or Level=0)]]",
+        "Security!*[System[(Level=1 or Level=2 or Level=3 or Level=4 or Level=0)]]",
+        "System!*[System[(Level=1 or Level=2 or Level=3 or Level=4 or Level=0)]]"
       ]
     }
   }
