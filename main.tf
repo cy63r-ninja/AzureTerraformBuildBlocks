@@ -1,3 +1,20 @@
+############################################
+# main.tf
+# - 1x Ubuntu 24.04 VM with public IP
+# - 1x Windows Server 2022 VM with public IP
+# - Shared VNet/Subnet + NSG (SSH/RDP)
+# - Log Analytics Workspace (LAW-test)
+# - Data Collection Endpoint (DCE)
+# - DCR (Linux: syslog auth/authpriv/syslog)
+# - DCR (Windows: Application/Security/System)
+# - AMA installed on both VMs
+############################################
+
+# Helpful local flags
+locals {
+  has_ssh_key = length(trimspace(var.linux_ssh_public_key)) > 0
+}
+
 # ----------------------------------------
 # Resource Group
 # ----------------------------------------
@@ -123,11 +140,9 @@ resource "azurerm_log_analytics_workspace" "law" {
 # Data Collection Endpoint (DCE)
 # ----------------------------------------
 resource "azurerm_monitor_data_collection_endpoint" "dce" {
-  name                = "${var.prefix}-dce"
-  location            = azurerm_resource_group.rg.location
-  resource_group_name = azurerm_resource_group.rg.name
-
-  # public network access is OK for this basic example
+  name                          = "${var.prefix}-dce"
+  location                      = azurerm_resource_group.rg.location
+  resource_group_name           = azurerm_resource_group.rg.name
   public_network_access_enabled = true
 }
 
@@ -166,42 +181,27 @@ resource "azurerm_linux_virtual_machine" "linux" {
     storage_account_type = "Standard_LRS"
   }
 
-  disable_password_authentication = length(trim(var.linux_ssh_public_key)) > 0
+  # Auth policy
+  disable_password_authentication = local.has_ssh_key
+  admin_password                  = local.has_ssh_key ? null : var.admin_password
 
   dynamic "admin_ssh_key" {
-    for_each = length(trim(var.linux_ssh_public_key)) > 0 ? [1] : []
+    for_each = local.has_ssh_key ? [1] : []
     content {
       username   = var.admin_username
       public_key = var.linux_ssh_public_key
     }
   }
-
-  # Optional fallback if no SSH key is provided
-  dynamic "admin_password" {
-    for_each = length(trim(var.linux_ssh_public_key)) == 0 ? [1] : []
-    content {
-      # not a real block type; Linux VM resource uses admin_password directly
-    }
-  }
-
-  # if no SSH key, set admin_password directly
-  provisioner "local-exec" {
-    when    = create
-    command = "echo '' > /dev/null"
-  }
-
-  # Set admin_password attribute only when needed (workaround using lifecycle + nulls)
-  admin_password = length(trim(var.linux_ssh_public_key)) == 0 ? var.admin_password : null
 }
 
 # AMA extension (Linux)
 resource "azurerm_virtual_machine_extension" "ama_linux" {
-  name                 = "AzureMonitorLinuxAgent"
-  virtual_machine_id   = azurerm_linux_virtual_machine.linux.id
-  publisher            = "Microsoft.Azure.Monitor"
-  type                 = "AzureMonitorLinuxAgent"
-  type_handler_version = "1.0"
-  automatic_upgrade_enabled = true
+  name                       = "AzureMonitorLinuxAgent"
+  virtual_machine_id         = azurerm_linux_virtual_machine.linux.id
+  publisher                  = "Microsoft.Azure.Monitor"
+  type                       = "AzureMonitorLinuxAgent"
+  type_handler_version       = "1.0"
+  automatic_upgrade_enabled  = true
 }
 
 # ----------------------------------------
@@ -226,7 +226,7 @@ resource "azurerm_windows_virtual_machine" "windows" {
     azurerm_network_interface.nic_windows.id
   ]
 
-  # Windows Server (Datacenter) image (closest to "Windows Server Std")
+  # Windows Server (Datacenter SKU commonly used in Azure)
   source_image_reference {
     publisher = "MicrosoftWindowsServer"
     offer     = "WindowsServer"
@@ -246,12 +246,12 @@ resource "azurerm_windows_virtual_machine" "windows" {
 
 # AMA extension (Windows)
 resource "azurerm_virtual_machine_extension" "ama_windows" {
-  name                 = "AzureMonitorWindowsAgent"
-  virtual_machine_id   = azurerm_windows_virtual_machine.windows.id
-  publisher            = "Microsoft.Azure.Monitor"
-  type                 = "AzureMonitorWindowsAgent"
-  type_handler_version = "1.0"
-  automatic_upgrade_enabled = true
+  name                       = "AzureMonitorWindowsAgent"
+  virtual_machine_id         = azurerm_windows_virtual_machine.windows.id
+  publisher                  = "Microsoft.Azure.Monitor"
+  type                       = "AzureMonitorWindowsAgent"
+  type_handler_version       = "1.0"
+  automatic_upgrade_enabled  = true
 }
 
 # ----------------------------------------
@@ -308,6 +308,7 @@ resource "azurerm_monitor_data_collection_rule" "dcr_windows" {
     }
   }
 
+  # Streams go here
   data_flow {
     streams      = ["Microsoft-WindowsEvent"]
     destinations = ["law-dest"]
@@ -315,10 +316,10 @@ resource "azurerm_monitor_data_collection_rule" "dcr_windows" {
 
   data_sources {
     windows_event_log {
-      name           = "win-events"
-      streams        = ["Microsoft-WindowsEvent"]
-      # Collect core channels (Application, Security, System)
-      xPath_queries = [
+      name = "win-events"
+
+      # Correct argument name (snake_case)
+      x_path_queries = [
         "Application!*[System[(Level >= 0)]]",
         "Security!*[System[(Level >= 0)]]",
         "System!*[System[(Level >= 0)]]"

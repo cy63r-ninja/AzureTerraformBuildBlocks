@@ -10,6 +10,7 @@ output "law_id" {
   value = azurerm_log_analytics_workspace.law.id
 }
 
-output "dce_uri" {
-  value = azurerm_monitor_data_collection_endpoint.dce.public_network_access_enabled ? azurerm_monitor_data_collection_endpoint.dce.endpoint : "private-only"
+# Replace the dce output with this:
+output "dce_id" {
+  value = azurerm_monitor_data_collection_endpoint.dce.id
 }
