@@ -199,8 +199,9 @@ resource "azurerm_virtual_machine_extension" "ama_linux" {
   virtual_machine_id        = azurerm_linux_virtual_machine.linux.id
   publisher                 = "Microsoft.Azure.Monitor"
   type                      = "AzureMonitorLinuxAgent"
-  type_handler_version      = "1.9.1"
+  type_handler_version      = "1.27"
   automatic_upgrade_enabled = true
+  auto_upgrade_minor_version = true
 }
 
 # ----------------------------------------
@@ -249,8 +250,9 @@ resource "azurerm_virtual_machine_extension" "ama_windows" {
   virtual_machine_id        = azurerm_windows_virtual_machine.windows.id
   publisher                 = "Microsoft.Azure.Monitor"
   type                      = "AzureMonitorWindowsAgent"
-  type_handler_version      = "1.9.0.0"
+  type_handler_version      = "1.18"
   automatic_upgrade_enabled = true
+  auto_upgrade_minor_version = true
 }
 
 # ----------------------------------------
