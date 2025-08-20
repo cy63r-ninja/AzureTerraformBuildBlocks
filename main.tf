@@ -170,7 +170,7 @@ resource "azurerm_linux_virtual_machine" "linux" {
   source_image_reference {
     publisher = "Canonical"
     offer     = "UbuntuServer"
-    sku       = "24_04-lts"
+    sku       = "ubuntu-22_04-lts-gen2"
     version   = "latest"
   }
 
