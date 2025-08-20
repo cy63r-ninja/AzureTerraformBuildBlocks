@@ -170,7 +170,7 @@ resource "azurerm_linux_virtual_machine" "linux" {
   source_image_reference {
     publisher = "Canonical"
     offer     = "UbuntuServer"
-    sku       = "24_04-lts-gen2"
+    sku       = "24_04-lts"
     version   = "latest"
   }
 
@@ -309,14 +309,14 @@ resource "azurerm_monitor_data_collection_rule" "dcr_windows" {
 
   # Route Windows events to LAW
   data_flow {
-    streams      = ["Microsoft-WindowsEvent"]
+    streams      = ["Microsoft-Event"]
     destinations = ["law-dest"]
   }
 
   data_sources {
     windows_event_log {
       name    = "win-events"
-      streams = ["Microsoft-WindowsEvent"]
+      streams = ["Microsoft-Event"]
 
       # Valid XPaths; collect levels 0..5 is broad. Narrowed to <=3 is common.
       x_path_queries = [
