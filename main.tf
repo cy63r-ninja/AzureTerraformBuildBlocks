@@ -10,7 +10,6 @@
 # - AMA installed on both VMs
 ############################################
 
-# Helpful local flags
 locals {
   has_ssh_key = length(trimspace(var.linux_ssh_public_key)) > 0
 }
@@ -181,7 +180,6 @@ resource "azurerm_linux_virtual_machine" "linux" {
     storage_account_type = "Standard_LRS"
   }
 
-  # Auth policy
   disable_password_authentication = local.has_ssh_key
   admin_password                  = local.has_ssh_key ? null : var.admin_password
 
@@ -196,12 +194,12 @@ resource "azurerm_linux_virtual_machine" "linux" {
 
 # AMA extension (Linux)
 resource "azurerm_virtual_machine_extension" "ama_linux" {
-  name                       = "AzureMonitorLinuxAgent"
-  virtual_machine_id         = azurerm_linux_virtual_machine.linux.id
-  publisher                  = "Microsoft.Azure.Monitor"
-  type                       = "AzureMonitorLinuxAgent"
-  type_handler_version       = "1.0"
-  automatic_upgrade_enabled  = true
+  name                      = "AzureMonitorLinuxAgent"
+  virtual_machine_id        = azurerm_linux_virtual_machine.linux.id
+  publisher                 = "Microsoft.Azure.Monitor"
+  type                      = "AzureMonitorLinuxAgent"
+  type_handler_version      = "1.0"
+  automatic_upgrade_enabled = true
 }
 
 # ----------------------------------------
@@ -226,7 +224,6 @@ resource "azurerm_windows_virtual_machine" "windows" {
     azurerm_network_interface.nic_windows.id
   ]
 
-  # Windows Server (Datacenter SKU commonly used in Azure)
   source_image_reference {
     publisher = "MicrosoftWindowsServer"
     offer     = "WindowsServer"
@@ -246,12 +243,12 @@ resource "azurerm_windows_virtual_machine" "windows" {
 
 # AMA extension (Windows)
 resource "azurerm_virtual_machine_extension" "ama_windows" {
-  name                       = "AzureMonitorWindowsAgent"
-  virtual_machine_id         = azurerm_windows_virtual_machine.windows.id
-  publisher                  = "Microsoft.Azure.Monitor"
-  type                       = "AzureMonitorWindowsAgent"
-  type_handler_version       = "1.0"
-  automatic_upgrade_enabled  = true
+  name                      = "AzureMonitorWindowsAgent"
+  virtual_machine_id        = azurerm_windows_virtual_machine.windows.id
+  publisher                 = "Microsoft.Azure.Monitor"
+  type                      = "AzureMonitorWindowsAgent"
+  type_handler_version      = "1.0"
+  automatic_upgrade_enabled = true
 }
 
 # ----------------------------------------
@@ -278,13 +275,13 @@ resource "azurerm_monitor_data_collection_rule" "dcr_linux" {
   data_sources {
     syslog {
       name           = "linux-syslog"
+      streams        = ["Microsoft-Syslog"]
       facility_names = ["auth", "authpriv", "syslog"]
       log_levels     = ["Debug", "Info", "Notice", "Warning", "Error", "Critical", "Alert", "Emergency"]
     }
   }
 }
 
-# Associate Linux DCR to the Linux VM
 resource "azurerm_monitor_data_collection_rule_association" "assoc_linux" {
   name                    = "${var.prefix}-assoc-linux"
   target_resource_id      = azurerm_linux_virtual_machine.linux.id
@@ -308,7 +305,6 @@ resource "azurerm_monitor_data_collection_rule" "dcr_windows" {
     }
   }
 
-  # Streams go here
   data_flow {
     streams      = ["Microsoft-WindowsEvent"]
     destinations = ["law-dest"]
@@ -316,9 +312,9 @@ resource "azurerm_monitor_data_collection_rule" "dcr_windows" {
 
   data_sources {
     windows_event_log {
-      name = "win-events"
+      name    = "win-events"
+      streams = ["Microsoft-WindowsEvent"]
 
-      # Correct argument name (snake_case)
       x_path_queries = [
         "Application!*[System[(Level >= 0)]]",
         "Security!*[System[(Level >= 0)]]",
@@ -328,7 +324,6 @@ resource "azurerm_monitor_data_collection_rule" "dcr_windows" {
   }
 }
 
-# Associate Windows DCR to the Windows VM
 resource "azurerm_monitor_data_collection_rule_association" "assoc_windows" {
   name                    = "${var.prefix}-assoc-windows"
   target_resource_id      = azurerm_windows_virtual_machine.windows.id
