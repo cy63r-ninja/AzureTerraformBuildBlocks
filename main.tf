@@ -169,8 +169,8 @@ resource "azurerm_linux_virtual_machine" "linux" {
   # Ubuntu 24.04 LTS (Gen2) - widely available image
   source_image_reference {
     publisher = "Canonical"
-    offer     = "UbuntuServer"
-    sku       = "ubuntu-22_04-lts-gen2"
+    offer     = "0001-com-ubuntu-server-jammy"
+    sku       = "ubuntu-22_04-lts"
     version   = "latest"
   }
 
